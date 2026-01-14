@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infinite Canvas</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            overflow: hidden;
+            background: #2a2a2a;
+        }
+        canvas {
+            display: block;
+            cursor: grab;
+        }
+        canvas:active {
+            cursor: grabbing;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+
+        // Canvas state
+        let offset = { x: 0, y: 0 };
+        let scale = 1;
+        let isDragging = false;
+        let dragStart = { x: 0, y: 0 };
+
+        // Resize canvas to fill window
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            render();
+        }
+
+        // Render the scene
+        function render() {
+            // Clear canvas
+            ctx.fillStyle = '#1e1e1e';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Save context state
+            ctx.save();
+
+            // Apply transformations
+            ctx.translate(offset.x, offset.y);
+            ctx.scale(scale, scale);
+
+            // Draw grid
+            drawGrid();
+
+            // Restore context state
+            ctx.restore();
+        }
+
+        // Draw infinite grid
+        function drawGrid() {
+            const gridSize = 50;
+            const startX = Math.floor(-offset.x / scale / gridSize) * gridSize;
+            const startY = Math.floor(-offset.y / scale / gridSize) * gridSize;
+            const endX = startX + (canvas.width / scale) + gridSize;
+            const endY = startY + (canvas.height / scale) + gridSize;
+
+            ctx.strokeStyle = '#333333';
+            ctx.lineWidth = 1 / scale;
+
+            // Vertical lines
+            for (let x = startX; x <= endX; x += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, startY);
+                ctx.lineTo(x, endY);
+                ctx.stroke();
+            }
+
+            // Horizontal lines
+            for (let y = startY; y <= endY; y += gridSize) {
+                ctx.beginPath();
+                ctx.moveTo(startX, y);
+                ctx.lineTo(endX, y);
+                ctx.stroke();
+            }
+        }
+
+        // Mouse down event
+        canvas.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            dragStart = { x: e.clientX - offset.x, y: e.clientY - offset.y };
+        });
+
+        // Mouse move event
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                offset.x = e.clientX - dragStart.x;
+                offset.y = e.clientY - dragStart.y;
+                render();
+            }
+        });
+
+        // Mouse up event
+        canvas.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        // Mouse leave event
+        canvas.addEventListener('mouseleave', () => {
+            isDragging = false;
+        });
+
+        // Wheel event for zooming
+        canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+
+            const mouseX = e.clientX;
+            const mouseY = e.clientY;
+
+            // Calculate mouse position in world space before zoom
+            const worldX = (mouseX - offset.x) / scale;
+            const worldY = (mouseY - offset.y) / scale;
+
+            // Update scale
+            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+            scale *= zoomFactor;
+
+            // Clamp scale
+            scale = Math.max(0.1, Math.min(10, scale));
+
+            // Calculate new offset to keep mouse position fixed
+            offset.x = mouseX - worldX * scale;
+            offset.y = mouseY - worldY * scale;
+
+            render();
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', resizeCanvas);
+
+        // Initial setup
+        resizeCanvas();
+    </script>
+</body>
+</html>
