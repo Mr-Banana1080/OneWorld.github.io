@@ -145,8 +145,8 @@ function drawMarks() {
         if (m.trace) {
             // Memory dust - faint, irregular
             const seed = (m.x * 1000 + m.y) % 1;
-            const markAlpha = (0.02 + seed * 0.05) * alpha;
-            const markRadius = (1.5 + seed * 2) * (radius / 4);
+            const markAlpha = (0.08 + seed * 0.12) * alpha;
+            const markRadius = (2 + seed * 2.5) * (radius / 4);
             
             ctx.fillStyle = `rgba(200,190,180,${markAlpha})`;
             ctx.beginPath();
@@ -216,7 +216,7 @@ canvas.addEventListener('mousemove', (e) => {
         
         // Check if thresholds are met
         const dragDuration = Date.now() - dragStartTime;
-        if (!canTrace && dragDuration > 250 && dragDistance > 25) {
+        if (!canTrace && dragDuration > 100 && dragDistance > 10) {
             canTrace = true;
             const worldX = (e.clientX - offset.x) / scale;
             const worldY = (e.clientY - offset.y) / scale;
@@ -227,7 +227,7 @@ canvas.addEventListener('mousemove', (e) => {
         // Leave residue traces
         if (canTrace && lastTracePos) {
             const now = Date.now();
-            const interval = 300 + Math.random() * 300;
+            const interval = 150 + Math.random() * 150;
             
             if (now - lastTraceTime > interval) {
                 const worldX = (e.clientX - offset.x) / scale;
@@ -237,7 +237,7 @@ canvas.addEventListener('mousemove', (e) => {
                 const dy = worldY - lastTracePos.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
                 
-                if (dist > 5) {
+                if (dist > 2) {
                     // Add slight offset for organic feel
                     const offsetX = (Math.random() - 0.5) * 8;
                     const offsetY = (Math.random() - 0.5) * 8;
