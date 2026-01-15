@@ -118,23 +118,62 @@ function drawGrid() {
 /* =========================
    MARKS (NEW)
 ========================= */
-const DAY = 86400000;
-const FADE_START = DAY;
-const FADE_END = 30 * DAY;
+const HOUR = 1000 * 60 * 60;
+const DAY  = HOUR * 24;
+
+const AGE_PHASES = {
+    fresh:  6 * HOUR,   // alive
+    recent: 2 * DAY,    // still clear
+    memory: 14 * DAY,   // fading
+    echo:   90 * DAY    // ghost
+};
+
 
 function getMarkStyle(mark) {
     const age = Date.now() - mark.t;
-    
-    if (age < FADE_START) {
-        return { alpha: 0.7, radius: 4 };
+
+    // Phase 1: Fresh (alive)
+    if (age < AGE_PHASES.fresh) {
+        return {
+            alpha: 0.9,
+            radius: 4.2
+        };
     }
-    
-    const fadeProgress = Math.min(1, (age - FADE_START) / (FADE_END - FADE_START));
-    const alpha = 0.7 * (1 - fadeProgress);
-    const radius = 4 * (1 - fadeProgress * 0.5);
-    
-    return { alpha, radius };
+
+    // Phase 2: Recent
+    if (age < AGE_PHASES.recent) {
+        const t = (age - AGE_PHASES.fresh) / (AGE_PHASES.recent - AGE_PHASES.fresh);
+        return {
+            alpha: 0.9 - t * 0.3,
+            radius: 4.2 - t * 0.4
+        };
+    }
+
+    // Phase 3: Memory
+    if (age < AGE_PHASES.memory) {
+        const t = (age - AGE_PHASES.recent) / (AGE_PHASES.memory - AGE_PHASES.recent);
+        return {
+            alpha: 0.6 - t * 0.4,
+            radius: 3.8 - t * 0.8
+        };
+    }
+
+    // Phase 4: Echo
+    if (age < AGE_PHASES.echo) {
+        const t = (age - AGE_PHASES.memory) / (AGE_PHASES.echo - AGE_PHASES.memory);
+        return {
+            alpha: 0.2 - t * 0.15,
+            radius: 3 - t * 1
+        };
+    }
+
+    // Forgotten
+    return {
+        alpha: 0,
+        radius: 0
+    };
 }
+
 
 function drawMarks() {
     for (const m of marks) {
