@@ -142,9 +142,14 @@ function drawMarks() {
         
         if (alpha < 0.01) continue;
         
-        ctx.fillStyle = `rgba(180,180,180,${alpha * 0.4})`;
+        // Randomize per mark (use position as seed for consistency)
+        const seed = (m.x * 1000 + m.y) % 1;
+        const markAlpha = (0.05 + seed * 0.1) * alpha;
+        const markRadius = (2 + seed * 3) * (radius / 4);
+        
+        ctx.fillStyle = `rgba(200,190,180,${markAlpha})`;
         ctx.beginPath();
-        ctx.arc(m.x, m.y, radius * 1.5, 0, Math.PI * 2);
+        ctx.arc(m.x, m.y, markRadius, 0, Math.PI * 2);
         ctx.fill();
     }
 }
@@ -171,47 +176,76 @@ setInterval(render, 60000);
 ========================= */
 let hasDragged = false;
 let lastTraceTime = 0;
-let lastTracePos = { x: 0, y: 0 };
+let lastTracePos = null;
+let dragStartTime = 0;
+let dragDistance = 0;
+let canTrace = false;
 
 canvas.addEventListener('mousedown', (e) => {
     isDragging = true;
     hasDragged = false;
     dragStart = { x: e.clientX - offset.x, y: e.clientY - offset.y };
-    
-    const worldX = (e.clientX - offset.x) / scale;
-    const worldY = (e.clientY - offset.y) / scale;
-    lastTracePos = { x: worldX, y: worldY };
-    lastTraceTime = Date.now();
+    dragStartTime = Date.now();
+    dragDistance = 0;
+    canTrace = false;
+    lastTracePos = null;
 });
 
 canvas.addEventListener('mousemove', (e) => {
     if (isDragging) {
         hasDragged = true;
+        
+        const prevOffsetX = offset.x;
+        const prevOffsetY = offset.y;
+        
         offset.x = e.clientX - dragStart.x;
         offset.y = e.clientY - dragStart.y;
         render();
         
-        // Record trace while dragging
-        const now = Date.now();
-        if (now - lastTraceTime > 400 + Math.random() * 200) {
+        // Track distance in world space
+        const dx = (offset.x - prevOffsetX) / scale;
+        const dy = (offset.y - prevOffsetY) / scale;
+        dragDistance += Math.sqrt(dx * dx + dy * dy);
+        
+        // Check if thresholds are met
+        const dragDuration = Date.now() - dragStartTime;
+        if (!canTrace && dragDuration > 250 && dragDistance > 25) {
+            canTrace = true;
             const worldX = (e.clientX - offset.x) / scale;
             const worldY = (e.clientY - offset.y) / scale;
+            lastTracePos = { x: worldX, y: worldY };
+            lastTraceTime = Date.now();
+        }
+        
+        // Leave residue traces
+        if (canTrace) {
+            const now = Date.now();
+            const interval = 500 + Math.random() * 400;
             
-            const dx = worldX - lastTracePos.x;
-            const dy = worldY - lastTracePos.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            
-            if (dist > 10) {
-                lastTracePos = { x: worldX, y: worldY };
-                lastTraceTime = now;
+            if (now - lastTraceTime > interval) {
+                const worldX = (e.clientX - offset.x) / scale;
+                const worldY = (e.clientY - offset.y) / scale;
                 
-                updateDoc(chunkRef, {
-                    marks: arrayUnion({
-                        x: worldX,
-                        y: worldY,
-                        t: now
-                    })
-                });
+                const dx = worldX - lastTracePos.x;
+                const dy = worldY - lastTracePos.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                
+                if (dist > 8) {
+                    // Add slight offset for organic feel
+                    const offsetX = (Math.random() - 0.5) * 6;
+                    const offsetY = (Math.random() - 0.5) * 6;
+                    
+                    lastTracePos = { x: worldX, y: worldY };
+                    lastTraceTime = now;
+                    
+                    updateDoc(chunkRef, {
+                        marks: arrayUnion({
+                            x: worldX + offsetX,
+                            y: worldY + offsetY,
+                            t: now
+                        })
+                    });
+                }
             }
         }
     }
