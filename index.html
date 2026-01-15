@@ -219,16 +219,19 @@ canvas.addEventListener('mousemove', (e) => {
         const interval = 200 + Math.random() * 200;
         
         if (now - lastTraceTime > interval) {
-            const worldX = (e.clientX - offset.x) / scale;
-            const worldY = (e.clientY - offset.y) / scale;
+            // Calculate center of viewport in world space
+            const centerScreenX = canvas.width / 2;
+            const centerScreenY = canvas.height / 2;
+            const worldCenterX = (centerScreenX - offset.x) / scale;
+            const worldCenterY = (centerScreenY - offset.y) / scale;
             
-            // Add slight offset for organic feel
-            const offsetX = (Math.random() - 0.5) * 8;
-            const offsetY = (Math.random() - 0.5) * 8;
+            // Add offset for organic feel
+            const offsetX = (Math.random() - 0.5) * 30;
+            const offsetY = (Math.random() - 0.5) * 30;
             
             const newMark = {
-                x: worldX + offsetX,
-                y: worldY + offsetY,
+                x: worldCenterX + offsetX,
+                y: worldCenterY + offsetY,
                 t: now,
                 trace: true
             };
@@ -238,7 +241,7 @@ canvas.addEventListener('mousemove', (e) => {
             // Optimistically add to local array
             marks.push(newMark);
             
-            console.log('✅ TRACE CREATED at', worldX.toFixed(1), worldY.toFixed(1));
+            console.log('✅ TRACE CREATED at', (worldCenterX + offsetX).toFixed(1), (worldCenterY + offsetY).toFixed(1));
             
             // Sync to Firestore
             setDoc(chunkRef, {
