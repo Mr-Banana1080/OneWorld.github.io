@@ -256,6 +256,12 @@ canvas.addEventListener('mousemove', (e) => {
         
         render();
     }
+    console.log({
+  canTrace,
+  dragDistance,
+  dragDuration: Date.now() - dragStartTime
+});
+
 });
 
 canvas.addEventListener('mouseup', () => isDragging = false);
