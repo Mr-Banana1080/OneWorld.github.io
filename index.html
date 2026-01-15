@@ -200,7 +200,6 @@ canvas.addEventListener('mousemove', (e) => {
         
         offset.x = e.clientX - dragStart.x;
         offset.y = e.clientY - dragStart.y;
-        render();
         
         // Track distance in world space
         const dx = (offset.x - prevOffsetX) / scale;
@@ -218,7 +217,7 @@ canvas.addEventListener('mousemove', (e) => {
         }
         
         // Leave residue traces
-        if (canTrace) {
+        if (canTrace && lastTracePos) {
             const now = Date.now();
             const interval = 500 + Math.random() * 400;
             
@@ -246,15 +245,16 @@ canvas.addEventListener('mousemove', (e) => {
                     
                     // Optimistically add to local array
                     marks.push(newMark);
-                    render();
                     
                     // Sync to Firestore
                     updateDoc(chunkRef, {
                         marks: arrayUnion(newMark)
-                    });
+                    }).catch(err => console.error('Firestore error:', err));
                 }
             }
         }
+        
+        render();
     }
 });
 
