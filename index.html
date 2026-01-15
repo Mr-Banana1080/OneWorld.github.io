@@ -227,7 +227,7 @@ canvas.addEventListener('mousemove', (e) => {
         // Leave residue traces
         if (canTrace && lastTracePos) {
             const now = Date.now();
-            const interval = 1200 + Math.random() * 800;
+            const interval = 300 + Math.random() * 300;
             
             if (now - lastTraceTime > interval) {
                 const worldX = (e.clientX - offset.x) / scale;
@@ -237,7 +237,7 @@ canvas.addEventListener('mousemove', (e) => {
                 const dy = worldY - lastTracePos.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
                 
-                if (dist > 15) {
+                if (dist > 5) {
                     // Add slight offset for organic feel
                     const offsetX = (Math.random() - 0.5) * 8;
                     const offsetY = (Math.random() - 0.5) * 8;
