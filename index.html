@@ -157,8 +157,10 @@ const chunkRef = doc(db, "chunks", "0_0");
 onSnapshot(chunkRef, (snap) => {
     if (snap.exists()) {
         marks = snap.data().marks || [];
-        render();
+    } else {
+        marks = [];
     }
+    render();
 });
 
 // Repaint to show aging
@@ -175,6 +177,11 @@ canvas.addEventListener('mousedown', (e) => {
     isDragging = true;
     hasDragged = false;
     dragStart = { x: e.clientX - offset.x, y: e.clientY - offset.y };
+    
+    const worldX = (e.clientX - offset.x) / scale;
+    const worldY = (e.clientY - offset.y) / scale;
+    lastTracePos = { x: worldX, y: worldY };
+    lastTraceTime = Date.now();
 });
 
 canvas.addEventListener('mousemove', (e) => {
