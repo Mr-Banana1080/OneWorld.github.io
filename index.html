@@ -118,11 +118,33 @@ function drawGrid() {
 /* =========================
    MARKS (NEW)
 ========================= */
+const DAY = 86400000;
+const FADE_START = DAY;
+const FADE_END = 30 * DAY;
+
+function getMarkStyle(mark) {
+    const age = Date.now() - mark.t;
+    
+    if (age < FADE_START) {
+        return { alpha: 0.7, radius: 4 };
+    }
+    
+    const fadeProgress = Math.min(1, (age - FADE_START) / (FADE_END - FADE_START));
+    const alpha = 0.7 * (1 - fadeProgress);
+    const radius = 4 * (1 - fadeProgress * 0.5);
+    
+    return { alpha, radius };
+}
+
 function drawMarks() {
-    ctx.fillStyle = "rgba(220,220,220,0.7)";
     for (const m of marks) {
+        const { alpha, radius } = getMarkStyle(m);
+        
+        if (alpha < 0.01) continue;
+        
+        ctx.fillStyle = `rgba(220,220,220,${alpha})`;
         ctx.beginPath();
-        ctx.arc(m.x, m.y, 4, 0, Math.PI * 2);
+        ctx.arc(m.x, m.y, radius, 0, Math.PI * 2);
         ctx.fill();
     }
 }
@@ -138,6 +160,9 @@ onSnapshot(chunkRef, (snap) => {
         render();
     }
 });
+
+// Repaint to show aging
+setInterval(render, 60000);
 
 /* =========================
    INTERACTION
