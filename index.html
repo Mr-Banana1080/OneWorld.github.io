@@ -214,64 +214,36 @@ canvas.addEventListener('mousemove', (e) => {
         const dy = (offset.y - prevOffsetY) / scale;
         dragDistance += Math.sqrt(dx * dx + dy * dy);
         
-        // Check if thresholds are met
-        const dragDuration = Date.now() - dragStartTime;
-        if (!canTrace && dragDuration > 50 && dragDistance > 3) {
-            canTrace = true;
+        // Simple trace: just check time interval
+        const now = Date.now();
+        const interval = 200 + Math.random() * 200;
+        
+        if (now - lastTraceTime > interval) {
             const worldX = (e.clientX - offset.x) / scale;
             const worldY = (e.clientY - offset.y) / scale;
-            lastTracePos = { x: worldX, y: worldY };
-            lastTraceTime = Date.now() - 200; // Start ready to trace immediately
-            console.log('🟢 TRACE UNLOCKED - duration:', dragDuration, 'distance:', dragDistance.toFixed(1));
-        }
-        
-        // Leave residue traces
-        if (canTrace && lastTracePos) {
-            const now = Date.now();
-            const interval = 80 + Math.random() * 80;
-            const timeSinceLastTrace = now - lastTraceTime;
             
-            if (now - lastTraceTime > interval) {
-                const worldX = (e.clientX - offset.x) / scale;
-                const worldY = (e.clientY - offset.y) / scale;
-                
-                const dx = worldX - lastTracePos.x;
-                const dy = worldY - lastTracePos.y;
-                const dist = Math.sqrt(dx * dx + dy * dy);
-                
-                console.log('⏱️ Trace check - time OK:', timeSinceLastTrace.toFixed(0), 'ms, distance:', dist.toFixed(1), 'units (need 0.5)');
-                
-                if (dist > 0.5) {
-                    console.log('✅ TRACE CREATED at', worldX.toFixed(1), worldY.toFixed(1));
-                    // Add slight offset for organic feel
-                    const offsetX = (Math.random() - 0.5) * 8;
-                    const offsetY = (Math.random() - 0.5) * 8;
-                    
-                    const newMark = {
-                        x: worldX + offsetX,
-                        y: worldY + offsetY,
-                        t: now,
-                        trace: true
-                    };
-                    
-                    lastTracePos = { x: worldX, y: worldY };
-                    lastTraceTime = now;
-                    
-                    // Optimistically add to local array
-                    marks.push(newMark);
-                    
-                    // Sync to Firestore
-                    setDoc(chunkRef, {
-                        marks: arrayUnion(newMark)
-                    }, { merge: true }).catch(err => console.error('Firestore error:', err));
-                } else {
-                    console.log('❌ Distance too small:', dist.toFixed(1));
-                }
-            } else {
-                console.log('⏳ Waiting for interval... (', timeSinceLastTrace.toFixed(0), '/', interval.toFixed(0), 'ms)');
-            }
-        } else if (isDragging) {
-            console.log('🔒 Not eligible yet - duration:', dragDuration, 'ms, distance:', dragDistance.toFixed(1), 'units');
+            // Add slight offset for organic feel
+            const offsetX = (Math.random() - 0.5) * 8;
+            const offsetY = (Math.random() - 0.5) * 8;
+            
+            const newMark = {
+                x: worldX + offsetX,
+                y: worldY + offsetY,
+                t: now,
+                trace: true
+            };
+            
+            lastTraceTime = now;
+            
+            // Optimistically add to local array
+            marks.push(newMark);
+            
+            console.log('✅ TRACE CREATED at', worldX.toFixed(1), worldY.toFixed(1));
+            
+            // Sync to Firestore
+            setDoc(chunkRef, {
+                marks: arrayUnion(newMark)
+            }, { merge: true }).catch(err => console.error('Firestore error:', err));
         }
         
         render();
