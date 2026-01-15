@@ -35,7 +35,7 @@ import {
     getFirestore,
     doc,
     getDoc,
-    updateDoc,
+    setDoc,
     arrayUnion,
     onSnapshot
 } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
@@ -247,9 +247,9 @@ canvas.addEventListener('mousemove', (e) => {
                     marks.push(newMark);
                     
                     // Sync to Firestore
-                    updateDoc(chunkRef, {
+                    setDoc(chunkRef, {
                         marks: arrayUnion(newMark)
-                    }).catch(err => console.error('Firestore error:', err));
+                    }, { merge: true }).catch(err => console.error('Firestore error:', err));
                 }
             }
         }
