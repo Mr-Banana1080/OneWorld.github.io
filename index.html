@@ -235,15 +235,22 @@ canvas.addEventListener('mousemove', (e) => {
                     const offsetX = (Math.random() - 0.5) * 6;
                     const offsetY = (Math.random() - 0.5) * 6;
                     
+                    const newMark = {
+                        x: worldX + offsetX,
+                        y: worldY + offsetY,
+                        t: now
+                    };
+                    
                     lastTracePos = { x: worldX, y: worldY };
                     lastTraceTime = now;
                     
+                    // Optimistically add to local array
+                    marks.push(newMark);
+                    render();
+                    
+                    // Sync to Firestore
                     updateDoc(chunkRef, {
-                        marks: arrayUnion({
-                            x: worldX + offsetX,
-                            y: worldY + offsetY,
-                            t: now
-                        })
+                        marks: arrayUnion(newMark)
                     });
                 }
             }
