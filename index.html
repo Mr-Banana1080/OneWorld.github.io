@@ -142,15 +142,23 @@ function drawMarks() {
         
         if (alpha < 0.01) continue;
         
-        // Randomize per mark (use position as seed for consistency)
-        const seed = (m.x * 1000 + m.y) % 1;
-        const markAlpha = (0.05 + seed * 0.1) * alpha;
-        const markRadius = (2 + seed * 3) * (radius / 4);
-        
-        ctx.fillStyle = `rgba(200,190,180,${markAlpha})`;
-        ctx.beginPath();
-        ctx.arc(m.x, m.y, markRadius, 0, Math.PI * 2);
-        ctx.fill();
+        if (m.trace) {
+            // Memory dust - faint, irregular
+            const seed = (m.x * 1000 + m.y) % 1;
+            const markAlpha = (0.02 + seed * 0.05) * alpha;
+            const markRadius = (1.5 + seed * 2) * (radius / 4);
+            
+            ctx.fillStyle = `rgba(200,190,180,${markAlpha})`;
+            ctx.beginPath();
+            ctx.arc(m.x, m.y, markRadius, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            // Primary marks - visible, intentional
+            ctx.fillStyle = `rgba(220,220,220,${alpha * 0.6})`;
+            ctx.beginPath();
+            ctx.arc(m.x, m.y, radius, 0, Math.PI * 2);
+            ctx.fill();
+        }
     }
 }
 
@@ -219,7 +227,7 @@ canvas.addEventListener('mousemove', (e) => {
         // Leave residue traces
         if (canTrace && lastTracePos) {
             const now = Date.now();
-            const interval = 500 + Math.random() * 400;
+            const interval = 1200 + Math.random() * 800;
             
             if (now - lastTraceTime > interval) {
                 const worldX = (e.clientX - offset.x) / scale;
@@ -229,15 +237,16 @@ canvas.addEventListener('mousemove', (e) => {
                 const dy = worldY - lastTracePos.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
                 
-                if (dist > 8) {
+                if (dist > 15) {
                     // Add slight offset for organic feel
-                    const offsetX = (Math.random() - 0.5) * 6;
-                    const offsetY = (Math.random() - 0.5) * 6;
+                    const offsetX = (Math.random() - 0.5) * 8;
+                    const offsetY = (Math.random() - 0.5) * 8;
                     
                     const newMark = {
                         x: worldX + offsetX,
                         y: worldY + offsetY,
-                        t: now
+                        t: now,
+                        trace: true
                     };
                     
                     lastTracePos = { x: worldX, y: worldY };
@@ -256,12 +265,6 @@ canvas.addEventListener('mousemove', (e) => {
         
         render();
     }
-        console.log({
-      canTrace,
-      dragDistance,
-      dragDuration: Date.now() - dragStartTime
-    });
-
 });
 
 canvas.addEventListener('mouseup', () => isDragging = false);
@@ -283,6 +286,29 @@ canvas.addEventListener('wheel', (e) => {
     offset.y = mouseY - worldY * scale;
 
     render();
+});
+
+/* =========================
+   CLICK → MARK
+========================= */
+canvas.addEventListener("click", async (e) => {
+    if (hasDragged) return;
+
+    const worldX = (e.clientX - offset.x) / scale;
+    const worldY = (e.clientY - offset.y) / scale;
+
+    const newMark = {
+        x: worldX,
+        y: worldY,
+        t: Date.now()
+    };
+
+    marks.push(newMark);
+    render();
+
+    setDoc(chunkRef, {
+        marks: arrayUnion(newMark)
+    }, { merge: true });
 });
 
 /* =========================
