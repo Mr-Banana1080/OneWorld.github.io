@@ -24,127 +24,181 @@
     </style>
 </head>
 <body>
-    <canvas id="canvas"></canvas>
-    <script>
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
+<canvas id="canvas"></canvas>
 
-        // Canvas state
-        let offset = { x: 0, y: 0 };
-        let scale = 1;
-        let isDragging = false;
-        let dragStart = { x: 0, y: 0 };
+<script type="module">
+/* =========================
+   FIREBASE SETUP (NEW)
+========================= */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+import {
+    getFirestore,
+    doc,
+    getDoc,
+    updateDoc,
+    arrayUnion,
+    onSnapshot
+} from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
 
-        // Resize canvas to fill window
-        function resizeCanvas() {
-            canvas.width = window.innerWidth;
-            canvas.height = window.innerHeight;
-            render();
-        }
+const firebaseConfig = {
+    apiKey: "AIzaSyCnT3iX67G0jBJdyCRbDyXxM0Te5m1hY54",
+    authDomain: "oneworld-ec021.firebaseapp.com",
+    projectId: "oneworld-ec021",
+    storageBucket: "oneworld-ec021.firebasestorage.app",
+    messagingSenderId: "477814044122",
+    appId: "1:477814044122:web:420b756e98923a1f64bce3"
+};
 
-        // Render the scene
-        function render() {
-            // Clear canvas
-            ctx.fillStyle = '#1e1e1e';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
-            // Save context state
-            ctx.save();
+/* =========================
+   CANVAS SETUP (UNCHANGED)
+========================= */
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
 
-            // Apply transformations
-            ctx.translate(offset.x, offset.y);
-            ctx.scale(scale, scale);
+// Canvas state
+let offset = { x: 0, y: 0 };
+let scale = 1;
+let isDragging = false;
+let dragStart = { x: 0, y: 0 };
 
-            // Draw grid
-            drawGrid();
+// Persistent marks (NEW)
+let marks = [];
 
-            // Restore context state
-            ctx.restore();
-        }
+/* =========================
+   RENDERING
+========================= */
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    render();
+}
 
-        // Draw infinite grid
-        function drawGrid() {
-            const gridSize = 50;
-            const startX = Math.floor(-offset.x / scale / gridSize) * gridSize;
-            const startY = Math.floor(-offset.y / scale / gridSize) * gridSize;
-            const endX = startX + (canvas.width / scale) + gridSize;
-            const endY = startY + (canvas.height / scale) + gridSize;
+function render() {
+    ctx.fillStyle = '#1e1e1e';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            ctx.strokeStyle = '#333333';
-            ctx.lineWidth = 1 / scale;
+    ctx.save();
+    ctx.translate(offset.x, offset.y);
+    ctx.scale(scale, scale);
 
-            // Vertical lines
-            for (let x = startX; x <= endX; x += gridSize) {
-                ctx.beginPath();
-                ctx.moveTo(x, startY);
-                ctx.lineTo(x, endY);
-                ctx.stroke();
-            }
+    drawGrid();
+    drawMarks();
 
-            // Horizontal lines
-            for (let y = startY; y <= endY; y += gridSize) {
-                ctx.beginPath();
-                ctx.moveTo(startX, y);
-                ctx.lineTo(endX, y);
-                ctx.stroke();
-            }
-        }
+    ctx.restore();
+}
 
-        // Mouse down event
-        canvas.addEventListener('mousedown', (e) => {
-            isDragging = true;
-            dragStart = { x: e.clientX - offset.x, y: e.clientY - offset.y };
-        });
+function drawGrid() {
+    const gridSize = 50;
+    const startX = Math.floor(-offset.x / scale / gridSize) * gridSize;
+    const startY = Math.floor(-offset.y / scale / gridSize) * gridSize;
+    const endX = startX + (canvas.width / scale) + gridSize;
+    const endY = startY + (canvas.height / scale) + gridSize;
 
-        // Mouse move event
-        canvas.addEventListener('mousemove', (e) => {
-            if (isDragging) {
-                offset.x = e.clientX - dragStart.x;
-                offset.y = e.clientY - dragStart.y;
-                render();
-            }
-        });
+    ctx.strokeStyle = '#333333';
+    ctx.lineWidth = 1 / scale;
 
-        // Mouse up event
-        canvas.addEventListener('mouseup', () => {
-            isDragging = false;
-        });
+    for (let x = startX; x <= endX; x += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, startY);
+        ctx.lineTo(x, endY);
+        ctx.stroke();
+    }
 
-        // Mouse leave event
-        canvas.addEventListener('mouseleave', () => {
-            isDragging = false;
-        });
+    for (let y = startY; y <= endY; y += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(startX, y);
+        ctx.lineTo(endX, y);
+        ctx.stroke();
+    }
+}
 
-        // Wheel event for zooming
-        canvas.addEventListener('wheel', (e) => {
-            e.preventDefault();
+/* =========================
+   MARKS (NEW)
+========================= */
+function drawMarks() {
+    ctx.fillStyle = "rgba(220,220,220,0.7)";
+    for (const m of marks) {
+        ctx.beginPath();
+        ctx.arc(m.x, m.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
 
-            const mouseX = e.clientX;
-            const mouseY = e.clientY;
+/* =========================
+   FIRESTORE: SINGLE TEST CHUNK
+========================= */
+const chunkRef = doc(db, "chunks", "0_0");
 
-            // Calculate mouse position in world space before zoom
-            const worldX = (mouseX - offset.x) / scale;
-            const worldY = (mouseY - offset.y) / scale;
+onSnapshot(chunkRef, (snap) => {
+    if (snap.exists()) {
+        marks = snap.data().marks || [];
+        render();
+    }
+});
 
-            // Update scale
-            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
-            scale *= zoomFactor;
+/* =========================
+   INTERACTION
+========================= */
+canvas.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    dragStart = { x: e.clientX - offset.x, y: e.clientY - offset.y };
+});
 
-            // Clamp scale
-            scale = Math.max(0.1, Math.min(10, scale));
+canvas.addEventListener('mousemove', (e) => {
+    if (isDragging) {
+        offset.x = e.clientX - dragStart.x;
+        offset.y = e.clientY - dragStart.y;
+        render();
+    }
+});
 
-            // Calculate new offset to keep mouse position fixed
-            offset.x = mouseX - worldX * scale;
-            offset.y = mouseY - worldY * scale;
+canvas.addEventListener('mouseup', () => isDragging = false);
+canvas.addEventListener('mouseleave', () => isDragging = false);
 
-            render();
-        });
+canvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
 
-        // Handle window resize
-        window.addEventListener('resize', resizeCanvas);
+    const mouseX = e.clientX;
+    const mouseY = e.clientY;
 
-        // Initial setup
-        resizeCanvas();
-    </script>
+    const worldX = (mouseX - offset.x) / scale;
+    const worldY = (mouseY - offset.y) / scale;
+
+    const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+    scale = Math.max(0.1, Math.min(10, scale * zoomFactor));
+
+    offset.x = mouseX - worldX * scale;
+    offset.y = mouseY - worldY * scale;
+
+    render();
+});
+
+/* =========================
+   CLICK → PERSISTENT MARK (NEW)
+========================= */
+canvas.addEventListener("click", async (e) => {
+    const worldX = (e.clientX - offset.x) / scale;
+    const worldY = (e.clientY - offset.y) / scale;
+
+    const mark = {
+        x: worldX,
+        y: worldY,
+        t: Date.now()
+    };
+
+    await updateDoc(chunkRef, {
+        marks: arrayUnion(mark)
+    });
+});
+
+/* =========================
+   INIT
+========================= */
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+</script>
 </body>
 </html>
