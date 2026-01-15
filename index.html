@@ -142,13 +142,17 @@ onSnapshot(chunkRef, (snap) => {
 /* =========================
    INTERACTION
 ========================= */
+let hasDragged = false;
+
 canvas.addEventListener('mousedown', (e) => {
     isDragging = true;
+    hasDragged = false;
     dragStart = { x: e.clientX - offset.x, y: e.clientY - offset.y };
 });
 
 canvas.addEventListener('mousemove', (e) => {
     if (isDragging) {
+        hasDragged = true;
         offset.x = e.clientX - dragStart.x;
         offset.y = e.clientY - dragStart.y;
         render();
@@ -180,6 +184,9 @@ canvas.addEventListener('wheel', (e) => {
    CLICK → PERSISTENT MARK (NEW)
 ========================= */
 canvas.addEventListener("click", async (e) => {
+    // Only place mark if user didn't drag
+    if (hasDragged) return;
+
     const worldX = (e.clientX - offset.x) / scale;
     const worldY = (e.clientY - offset.y) / scale;
 
