@@ -118,62 +118,23 @@ function drawGrid() {
 /* =========================
    MARKS (NEW)
 ========================= */
-const HOUR = 1000 * 60 * 60;
-const DAY  = HOUR * 24;
-
-const AGE_PHASES = {
-    fresh:  6 * HOUR,   // alive
-    recent: 2 * DAY,    // still clear
-    memory: 14 * DAY,   // fading
-    echo:   90 * DAY    // ghost
-};
-
+const DAY = 86400000;
+const FADE_START = DAY;
+const FADE_END = 30 * DAY;
 
 function getMarkStyle(mark) {
     const age = Date.now() - mark.t;
-
-    // Phase 1: Fresh (alive)
-    if (age < AGE_PHASES.fresh) {
-        return {
-            alpha: 0.9,
-            radius: 4.2
-        };
+    
+    if (age < FADE_START) {
+        return { alpha: 0.7, radius: 4 };
     }
-
-    // Phase 2: Recent
-    if (age < AGE_PHASES.recent) {
-        const t = (age - AGE_PHASES.fresh) / (AGE_PHASES.recent - AGE_PHASES.fresh);
-        return {
-            alpha: 0.9 - t * 0.3,
-            radius: 4.2 - t * 0.4
-        };
-    }
-
-    // Phase 3: Memory
-    if (age < AGE_PHASES.memory) {
-        const t = (age - AGE_PHASES.recent) / (AGE_PHASES.memory - AGE_PHASES.recent);
-        return {
-            alpha: 0.6 - t * 0.4,
-            radius: 3.8 - t * 0.8
-        };
-    }
-
-    // Phase 4: Echo
-    if (age < AGE_PHASES.echo) {
-        const t = (age - AGE_PHASES.memory) / (AGE_PHASES.echo - AGE_PHASES.memory);
-        return {
-            alpha: 0.2 - t * 0.15,
-            radius: 3 - t * 1
-        };
-    }
-
-    // Forgotten
-    return {
-        alpha: 0,
-        radius: 0
-    };
+    
+    const fadeProgress = Math.min(1, (age - FADE_START) / (FADE_END - FADE_START));
+    const alpha = 0.7 * (1 - fadeProgress);
+    const radius = 4 * (1 - fadeProgress * 0.5);
+    
+    return { alpha, radius };
 }
-
 
 function drawMarks() {
     for (const m of marks) {
@@ -181,9 +142,9 @@ function drawMarks() {
         
         if (alpha < 0.01) continue;
         
-        ctx.fillStyle = `rgba(220,220,220,${alpha})`;
+        ctx.fillStyle = `rgba(180,180,180,${alpha * 0.4})`;
         ctx.beginPath();
-        ctx.arc(m.x, m.y, radius, 0, Math.PI * 2);
+        ctx.arc(m.x, m.y, radius * 1.5, 0, Math.PI * 2);
         ctx.fill();
     }
 }
@@ -207,6 +168,8 @@ setInterval(render, 60000);
    INTERACTION
 ========================= */
 let hasDragged = false;
+let lastTraceTime = 0;
+let lastTracePos = { x: 0, y: 0 };
 
 canvas.addEventListener('mousedown', (e) => {
     isDragging = true;
@@ -220,6 +183,30 @@ canvas.addEventListener('mousemove', (e) => {
         offset.x = e.clientX - dragStart.x;
         offset.y = e.clientY - dragStart.y;
         render();
+        
+        // Record trace while dragging
+        const now = Date.now();
+        if (now - lastTraceTime > 400 + Math.random() * 200) {
+            const worldX = (e.clientX - offset.x) / scale;
+            const worldY = (e.clientY - offset.y) / scale;
+            
+            const dx = worldX - lastTracePos.x;
+            const dy = worldY - lastTracePos.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            
+            if (dist > 10) {
+                lastTracePos = { x: worldX, y: worldY };
+                lastTraceTime = now;
+                
+                updateDoc(chunkRef, {
+                    marks: arrayUnion({
+                        x: worldX,
+                        y: worldY,
+                        t: now
+                    })
+                });
+            }
+        }
     }
 });
 
@@ -242,27 +229,6 @@ canvas.addEventListener('wheel', (e) => {
     offset.y = mouseY - worldY * scale;
 
     render();
-});
-
-/* =========================
-   CLICK → PERSISTENT MARK (NEW)
-========================= */
-canvas.addEventListener("click", async (e) => {
-    // Only place mark if user didn't drag
-    if (hasDragged) return;
-
-    const worldX = (e.clientX - offset.x) / scale;
-    const worldY = (e.clientY - offset.y) / scale;
-
-    const mark = {
-        x: worldX,
-        y: worldY,
-        t: Date.now()
-    };
-
-    await updateDoc(chunkRef, {
-        marks: arrayUnion(mark)
-    });
 });
 
 /* =========================
